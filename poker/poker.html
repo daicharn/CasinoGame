@@ -1,0 +1,71 @@
+<html>
+ <head>
+ <meta charset="utf-8">
+ <link rel="stylesheet" href="poker.css">
+ <title>ポーカー</title>
+ </head>
+ <body>
+  <div id="roles_board_div">
+   <div id="roles_big_label">
+    <div id="rsf_label">ロイヤルストレートフラッシュ</div>
+    <div id="fivec_label">ファイブカード</div>
+    <div id="sf_label">ストレートフラッシュ</div>
+    <div id="fourc_label">フォーカード</div>
+   </div>
+   <div id="roles_big_value">
+    <div class="role_coin_value" id="rsf_value">0</div>
+    <div class="role_coin_value" id="fivec_value">0</div>
+    <div class="role_coin_value" id="sf_value">0</div>
+    <div class="role_coin_value" id="fourc_value">0</div>
+   </div>
+   <div id="roles_small_label">
+    <div id="fh_label">フルハウス</div>
+    <div id="flush_label">フラッシュ</div>
+    <div id="straight_label">ストレート</div>
+    <div id="threec_label">スリーカード</div>
+    <div id="twopair_label">ツーペア</div>
+   </div>
+   <div id="roles_small_value">
+    <div class="role_coin_value" id="fh_value">0</div>
+    <div class="role_coin_value" id="flush_value">0</div>
+    <div class="role_coin_value" id="straight_value">0</div>
+    <div class="role_coin_value" id="threec_value">0</div>
+    <div class="role_coin_value" id="twopair_value">0</div>
+   </div>
+  </div>
+  <div id="tefuda_block_div"></div>
+  <div id="btn_flip">くばる</div>
+  <div id="bet_setting_div">
+   <p id="bet_setting_p">掛け金を設定してください</p>
+   <table>
+    <tr>
+     <td style="white-space: nowrap;"><label id="multiplier_label" for="select_multiplier">コインの倍率</label></td>
+     <td>
+      <select id="select_multiplier">
+       <option value="1">1コイン</option>
+       <option value="10">10コイン</option>
+       <option value="100">100コイン</option>
+      </select>
+     </td>
+     <td><div class="btn_bet_control"><span>-</span></div></td>
+     <td style="white-space: nowrap;"><span style="color:rgb(255,255,255)";">左右で調整</span></td>
+     <td><div class="btn_bet_control"><span>+</span></div></td>
+    </tr>
+   </table>
+   <div id="btn_enter">決定</div>
+  </div>
+  <div id="coinmenu_div">
+    <div class="coinmenu_item_div" id="coin_div">
+     <div id="coin_label">COIN</div>
+     <div id="coin_value">10000000</div>
+    </div>
+    <div class="coinmenu_item_div" id="bet_div">
+     <div id="bet_win_label"><span id="bet_label">BET</span>/<span id="win_label">WIN</span></div>
+     <div id="bet_win_value">0</div>
+    </div>
+  </div>
+ </body>
+ <script src="../script_util.js"></script>
+ <script src="../script_core.js"></script>
+ <script src="script_poker.js"></script>
+</html>
