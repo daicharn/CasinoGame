@@ -52,4 +52,8 @@ class ScriptUtil{
 
         return result;
     }
+
+    static sleep(time){
+        return new Promise(resolve => setTimeout(resolve, time));
+    }
 }

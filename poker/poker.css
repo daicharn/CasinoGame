@@ -15,6 +15,7 @@ body{
     box-shadow: 0 0 10px;
     border-radius: 15px;
     font-size: 18px;
+    font-weight: bold;
 }
 #roles_big_label, #roles_small_label, #roles_big_value, #roles_small_value{
     margin: 20px 0;
@@ -34,6 +35,14 @@ body{
 #roles_small_value{
     padding-right: 50px;
 }
+.role_label{
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+}
+.role_coin_value{
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+}
 
 
 #tefuda_block_div{
@@ -43,9 +52,27 @@ body{
 .tefuda_div{
     margin: 0 30px;
 }
-.tefuda_img{
+.tefuda_img_div{
+    position: relative;
+    overflow: hidden;
+}
+.tefuda_img, .tefuda_img_back{
     width: 120px;
     visibility: hidden;
+    backface-visibility: hidden;
+}
+.tefuda_img{
+    position: relative;
+    z-index: 0;
+    transition: transform 0.5s;
+}
+.tefuda_img_back{
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    backface-visibility: hidden;
+    transition: all 0.5s;
 }
 .tefuda_btn{
     text-align: center;
@@ -59,7 +86,7 @@ body{
     visibility: hidden;
 }
 
-#btn_flip{
+#btn_flip, #btn_retry{
     text-align: center;
     width: 180px;
     margin: 30px auto;
@@ -72,7 +99,13 @@ body{
     cursor: pointer;
     visibility: hidden;
 }
-#btn_flip:hover{
+#btn_retry{
+    position: absolute;
+    top: 65%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+#btn_flip:hover, #btn_retry:hover{
     background-color: rgba(20, 20, 20, 0.8);
 }
 
@@ -158,4 +191,25 @@ body{
 }
 #bet_label{
     color: rgb(204, 3, 194);
+}
+
+#role_str_center{
+    display: block;
+    position: absolute;
+    top: 350px;
+    left: 50%;
+    margin: 0 auto;
+    transform: translateX(-50%);
+    font-size: 60px;
+    white-space: nowrap;
+    letter-spacing: 5px;
+    font-weight: bold;
+    font-family: "UD デジタル 教科書体 N-B";
+    -webkit-text-stroke: 1px rgb(0, 0, 0);
+}
+.role_str_span{
+    background: linear-gradient(rgb(255, 187, 0), rgb(255, 251, 0));
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }

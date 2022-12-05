@@ -4,15 +4,15 @@ const TEFUDA_NUM = 5;
 const BET_MAX = 10;
 //役に関連するものの定義
 const ROLES_INFO = {
-    royalstraightflush: {value : 0, coin: 100},
-    fivecard: {value : 1, coin: 50},
-    straightflush: {value : 2, coin: 20},
-    fourcard: {value : 3, coin: 10},
-    fullhouse: {value : 4, coin: 5},
-    flush: {value : 5, coin: 4},
-    straight: {value : 6, coin: 3},
-    threecard: {value : 7, coin: 1},
-    twopair: {value : 8, coin: 1}
+    royalstraightflush: {value : 0, coin: 100, name: "ロイヤルストレートフラッシュ"},
+    fivecard: {value : 1, coin: 50, name: "ファイブカード"},
+    straightflush: {value : 2, coin: 20, name: "ストレートフラッシュ"},
+    fourcard: {value : 3, coin: 10, name: "フォーカード"},
+    fullhouse: {value : 4, coin: 5, name: "フルハウス"},
+    flush: {value : 5, coin: 4, name: "フラッシュ"},
+    straight: {value : 6, coin: 3, name: "ストレート"},
+    threecard: {value : 7, coin: 1, name: "スリーカード"},
+    twopair: {value : 8, coin: 1, name: "ツーペア"}
 }
 //山札の配列（合計53枚）
 let yamafuda_array = ScriptCore.generateTrumpYamafuda();
@@ -22,18 +22,34 @@ let tefuda_array = [];
 let tefuda_change_flgs = new Array(5).fill(true);
 //BETの回数
 let bet_count = 0;
+//成立した役の種類を記憶
+let role_complete_type = -1;
+
+//アニメーション用のオブジェクト
+//役のラベル用
+let animate_label_objs = new Array(Object.keys(ROLES_INFO).length).fill(null);
+let animate_value_objs = new Array(Object.keys(ROLES_INFO).length).fill(null);
+//手札の画像用
+let animate_tefuda_objs = new Array(TEFUDA_NUM).fill(null);
 
 //手札の基盤を作成
 for(let i = 0; i < TEFUDA_NUM; i++){
     let tefuda_div = document.createElement('div');
     tefuda_div.className = "tefuda_div";
     tefuda_div.id = "tefuda_div_" + String(i + 1);
+    let tefuda_img_div = document.createElement('div'); 
+    tefuda_img_div.className = "tefuda_img_div";
     let tefuda_img = document.createElement('img');
+    let tefuda_img_back = document.createElement('img');
+    tefuda_img_back.className = "tefuda_img_back";
+    tefuda_img_back.src = ScriptCore.generateTrumpBackImagePath(TRUMP_PATTERN_TYPE.normal);
     tefuda_img.className = "tefuda_img";
+    tefuda_img_div.appendChild(tefuda_img);
+    tefuda_img_div.appendChild(tefuda_img_back);
     let tefuda_btn = document.createElement('div');
     tefuda_btn.className = "tefuda_btn";
     tefuda_btn.innerText = "かえる";
-    tefuda_div.appendChild(tefuda_img);
+    tefuda_div.appendChild(tefuda_img_div);
     tefuda_div.appendChild(tefuda_btn);
     document.getElementById('tefuda_block_div').appendChild(tefuda_div);
 }
@@ -137,7 +153,7 @@ function toggleVisibleBetSetting(flg){
 }
 
 //掛け金の決定ボタンがクリックされた時の処理を登録
-document.getElementById('btn_enter').addEventListener("click", () =>{
+document.getElementById('btn_enter').addEventListener("click", async() =>{
     //コインの量
     let coin_value = getCoinValue();
     //BETの量
@@ -164,20 +180,297 @@ document.getElementById('btn_enter').addEventListener("click", () =>{
     sortTefudaArray(tefuda_array);
     //5枚引いた手札の画像を挿入
     insertFiveTefudaImages();
-    
-    //各要素を表示する
-    toggleVisibleTefudaImages(true);
+
+    //手札の裏の画像
+    let tefuda_imgs_back = document.getElementsByClassName('tefuda_img_back');
+    //手札のアニメーション
+    for(let i = 0; i < tefuda_array.length; i++) {
+        //手札の裏を見える状態にする
+        tefuda_imgs_back[i].style.visibility = "visible";
+        //手札を上から下に動かすアニメーション
+        let duration_time = 200;
+        upDownTefudaImageAnimation(i + 1, duration_time);
+        //上下に動かす時間分待機
+        await ScriptUtil.sleep(duration_time);
+        //手札を表示
+        Array.from(document.getElementsByClassName('tefuda_img'))[i].style.visibility = "visible";
+        //手札をひっくり返すアニメーション
+        turnTefudaImageAnimation(i + 1);
+        //手札の裏を見えない状態にする
+        tefuda_imgs_back[i].style.visibility = "hidden";
+    }
+
+    //1秒程度待機
+    await ScriptUtil.sleep(1000);
+    //手札の裏の回転をリセットする
+    resetTurnTefudaImageBack();
+    //手札のボタンと配るボタンを表示
     toggleVisibleTefudaButtons(true);
     toggleVisibleFlipButton(true);
 
     //役の判定を行う
     let roles_result = judgeRoles(tefuda_array);
+    //役が成立した場合
     if(roles_result != undefined){
-        console.log(Object.keys(ROLES_INFO)[roles_result[0]]);
+        //役のラベルを光らせる
+        lightRoleLabel(roles_result[0], true);
+        //役に該当する手札の画像を光らせる
+        roles_result[1].forEach(x => ShiningTefudaImage(x + 1));
+        //成立した役の記憶
+        role_complete_type = roles_result[0];
     }
+});
+
+//手札の画像を上から下に動かすアニメーション
+function upDownTefudaImageAnimation(num, duration_time){
+    //1から5で指定
+    if(num > 0 && num <= TEFUDA_NUM){
+        //手札の画像の要素
+        let tefuda_img_div = document.getElementsByClassName('tefuda_img_div')[num - 1];
+        let keyframes_moving = [{transform: "translateY(-700px)"}, {transform: "translateY(0)"}];
+        let leyframes_setting = {duration: duration_time};
+        tefuda_img_div.animate(keyframes_moving, leyframes_setting);
+    }
+}
+
+//手札をひっくり返すアニメーション
+function turnTefudaImageAnimation(num){
+    //1から5で指定
+    if(num > 0 && num <= TEFUDA_NUM){
+        //手札の表の画像
+        let tefuda_img = document.getElementsByClassName('tefuda_img')[num - 1];
+        //手札の裏の画像
+        let tefuda_img_back = document.getElementsByClassName('tefuda_img_back')[num - 1];
+        //手札を裏から表にひっくり返すアニメーション
+        if(tefuda_img.style.transform == ""){
+            tefuda_img.style.transform = "rotateY(360deg)";
+        }
+        else{
+            tefuda_img.style.transform = "";
+        }
+        tefuda_img_back.style.transform = "rotateY(-180deg)";
+    }
+}
+//手札の裏の回転をリセットする
+function resetTurnTefudaImageBack(){
+    //手札の裏の画像
+    let tefuda_imgs_back = Array.from(document.getElementsByClassName('tefuda_img_back'));
+    tefuda_imgs_back.forEach(tefuda_img_back => {
+        tefuda_img_back.style.transform = "";
+    });
+}
+
+//役の名前を画面中央に表示する
+async function viewRoleNameCenter(role_index){
+    //役の名前を表示する要素
+    role_str_center = document.getElementById('role_str_center');
+    //役の名前の文字を取得
+    role_str = ROLES_INFO[Object.keys(ROLES_INFO)[role_index]].name;
+    //役の文字を1文字ずつspanで区切って表示する要素に放り込む
+    Array.prototype.forEach.call(role_str, (str) => {
+        let elem_span = document.createElement('span');
+        elem_span.className = "role_str_span";
+        elem_span.innerText = str;
+        elem_span.style.display = "inline-block";
+        elem_span.style.visibility = "hidden";
+        role_str_center.appendChild(elem_span);
+    });
+    //末尾にビックリマークを追加
+    let span_exclamation = document.createElement('span');
+    span_exclamation.className = "role_str_span";
+    span_exclamation.innerText = "！";
+    span_exclamation.style.display = "inline-block";
+    span_exclamation.style.visibility = "hidden";
+    role_str_center.appendChild(span_exclamation);
+
+    let role_str_spans = Array.from(document.getElementsByClassName('role_str_span'));
+    //一文字ずつ下から出現するアニメーション
+    for(let i = 0; i < role_str_spans.length; i++){
+        let duration_time_1 = 100;
+        role_str_spans[i].style.visibility = "visible";
+        role_str_spans[i].animate([{transform: "translateY(50px)"}, {transform: "translateY(0)"}], {duration: duration_time_1});
+        await ScriptUtil.sleep(duration_time_1);
+    }
+    //前方へ少し移動して消えるアニメーション
+    let duration_time_2 = 200;
+    role_str_center.animate([{offset: 0.2, transform: "translateX(-50%) scale(0.9)"}, {offset: 1.0, transform: "translate(-50%, 1px) scale(1.3)"}], {duration: duration_time_2});
+    await ScriptUtil.sleep(duration_time_2);
+    //span要素を全て削除
+    role_str_spans.forEach(role_str_span => role_str_span.remove());
+}
+
+//BETラベルを点灯させてWINラベルを消灯する
+function lightUpBetLabel(){
+    let bet_label = document.getElementById('bet_label');
+    let win_label = document.getElementById('win_label');
+    //BETラベルを点灯
+    bet_label.style.color = "rgb(204, 3, 194)";
+    //WINラベルを消灯
+    win_label.style.color = "rgb(255, 255, 255)";
+    
+}
+//WINラベルを点灯させてBETラベルを消灯する
+function lightUpWinLabel(){
+    let bet_label = document.getElementById('bet_label');
+    let win_label = document.getElementById('win_label');
+    //WINラベルを点灯
+    win_label.style.color = "rgb(0, 236, 39)";
+    //BETラベルを消灯
+    bet_label.style.color = "rgb(255, 255, 255)";
+}
+
+//指定の要素内の数値を開始する値から終了する値まで指定の間隔で増減させる
+async function countUpDownElemNum(target_div, start, end, increment){
+    if(!(start == end)){
+        while(start != end){
+            //開始の値が終了の値より小さい場合、加算する
+            if(start < end){
+                start += increment;
+            }
+            //開始の値が終了の値より大きい場合、減算する
+            else{
+                start -= increment;
+            }
+            target_div.innerText = start;
+            //10ms待機する
+            await ScriptUtil.sleep(10);
+        }
+    }
+}
+
+//カードを配るボタンがクリックされた時の処理を登録
+document.getElementById('btn_flip').addEventListener("click",async() =>{
+    //カードを配るボタンを見えなくする
+    toggleVisibleFlipButton(false);
+    //手札のボタンを見えなくする
+    toggleVisibleTefudaButtons(false);
+
+    //手札全て残す場合以外は手札を変える処理を行う
+    if(tefuda_change_flgs.some(tefuda_change_flg => tefuda_change_flg)){
+        //入れ替える手札を一時的に非表示
+        Array.from(document.getElementsByClassName('tefuda_img')).forEach((tefuda_img, i) => {
+            if(tefuda_change_flgs[i]){
+                tefuda_img.style.visibility = "hidden";
+            }
+        });
+
+        //手札を変える場所を探す
+        for(let i = 0; i < tefuda_change_flgs.length; i++) {
+            //変える指定があった手札の変更を行う
+            if(tefuda_change_flgs[i]){
+                //手札の画像の輝きを止める
+                stopShiningTefudaImages();
+                //役のラベルの点灯をすべて削除
+                Object.keys(ROLES_INFO).forEach((_, i) => lightRoleLabel(i, false));
+                
+                //山札からカードを一枚引く
+                let drawn_card = yamafuda_array.pop();
+                //引いたカードを手札に置き換える
+                tefuda_array[i] = drawn_card;
+
+                //手札を裏返す（手札の裏用の画像を表示する）
+                //手札の裏の画像
+                let tefuda_imgs_back = document.getElementsByClassName('tefuda_img_back');
+                //手札の裏を見える状態にする
+                tefuda_imgs_back[i].style.visibility = "visible";
+                //手札を上から下に動かすアニメーション
+                let duration_time = 200;
+                upDownTefudaImageAnimation(i + 1, duration_time);
+                //上下に動かす時間分待機
+                await ScriptUtil.sleep(duration_time);
+                //一時的に非表示にしていた手札を再度表示
+                Array.from(document.getElementsByClassName('tefuda_img'))[i].style.visibility = "visible";
+                //手札の画像を置き換える
+                insertTargetTefudaImage(i + 1, ScriptCore.generateTrumpImagePath(TRUMP_PATTERN_TYPE.normal, drawn_card[0], drawn_card[1]));
+                //手札をひっくり返すアニメーション
+                turnTefudaImageAnimation(i + 1);
+                //手札の裏を見えない状態にする
+                tefuda_imgs_back[i].style.visibility = "hidden";
+            }
+        }
+
+        //1秒程度待機
+        await ScriptUtil.sleep(1000);
+        //手札の裏の回転をリセットする
+        resetTurnTefudaImageBack();
+
+        //再度役の判定を行う
+        let roles_result = judgeRoles(tefuda_array);
+        //役が成立した場合
+        if(roles_result != undefined){
+            //役のラベルを光らせる
+            lightRoleLabel(roles_result[0], true);
+            //役に該当する手札の画像を光らせる
+            roles_result[1].forEach(x => ShiningTefudaImage(x + 1));
+            //成立した役の記憶
+            role_complete_type = roles_result[0];
+        }
+        else{
+            //役が何もない状態に戻す
+            role_complete_type = -1;
+        }
+    }
+
+    //手札のボタンとフラグを初期化
+    initAllTefudaButtons();
+
+    //役が成立している場合
+    if(role_complete_type != -1){
+        //獲得したコインを表示
+        let get_coin_value = Number(Array.from(document.getElementsByClassName('role_coin_value'))[role_complete_type].innerText);
+        setBetWinValue(get_coin_value);
+        //WINラベルを点灯させる
+        lightUpWinLabel();
+        //役の名前を画面中央に表示するアニメーション
+        await viewRoleNameCenter(role_complete_type);
+
+        //所持コインと獲得コインの入れ替え
+        let multiplier_value = Number(document.getElementById('select_multiplier').value);
+        let coin_value_div = document.getElementById('coin_value');
+        let win_value_div = document.getElementById('bet_win_value');
+        let coin_value = Number(coin_value_div.innerText);
+        let win_value = Number(win_value_div.innerText);
+        //所持コインを増やす
+        await countUpDownElemNum(coin_value_div, coin_value, coin_value + win_value, multiplier_value);
+        //獲得コインを減らす
+        await countUpDownElemNum(win_value_div, win_value, 0, multiplier_value);
+    }
+    //役が成立していない場合
     else{
-        console.log("役なし");
+        //獲得コインを0枚にする
+        let win_value_div = document.getElementById('bet_win_value');
+        win_value_div.innerText = "0";
     }
+
+    //再挑戦ボタンを表示
+    let btn_retry = document.getElementById('btn_retry');
+    btn_retry.style.visibility = "visible";
+});
+
+//再挑戦ボタンがクリックされた時の処理を登録
+document.getElementById('btn_retry').addEventListener("click",() =>{
+    //自分自身を非表示にする
+    document.getElementById('btn_retry').style.visibility = "hidden";
+    //役のラベルの点灯をすべて削除
+    Object.keys(ROLES_INFO).forEach((_, i) => lightRoleLabel(i, false));
+    //手札の画像の輝きを止める
+    stopShiningTefudaImages();
+    //全ての手札の画像をクリアして非表示にする
+    clearAllTefudaImages();
+    //BETラベルが点灯している状態に戻す
+    lightUpBetLabel();
+    //一番左の手札に裏返しにしたトランプの画像を設置する
+    insertTrampBackImageToTefudaFirst();
+    //山札の初期化
+    yamafuda_array = ScriptCore.generateTrumpYamafuda();
+    //手札の初期化
+    tefuda_array = [];
+    //BETの額を再設定
+    let bet_win_value = document.getElementById('bet_win_value');
+    bet_win_value.innerText = Number(document.getElementById('select_multiplier').value) * bet_count;
+    //掛け金設定項目を表示する
+    bet_setting_div = document.getElementById('bet_setting_div');
+    bet_setting_div.style.visibility = "visible";
 });
 
 //指定した手札ボタンのフラグを変更
@@ -199,6 +492,14 @@ function changeTefudaBtnView(tefuda_btn_div, flg){
         tefuda_btn_div.style.backgroundColor = "rgba(255, 251, 8, 0.6)";
         tefuda_btn_div.style.color = "rgb(0, 0, 0)";
     }
+}
+
+//全ての手札ボタンのフラグと表示を初期化
+function initAllTefudaButtons(){
+    tefuda_change_flgs.forEach((x, i) => {
+        changeTefudaBtnFlg(i, true);
+        changeTefudaBtnView(document.getElementsByClassName('tefuda_btn')[i], true);
+    });
 }
 
 //手札の変更フラグボタンのイベント登録
@@ -277,6 +578,16 @@ function toggleVisibleTefudaImages(flg){
         }
     });
 }
+
+//手札の画像をすべてクリアして非表示にする
+function clearAllTefudaImages(){
+    let tefuda_images = document.getElementsByClassName('tefuda_img');
+    Array.from(tefuda_images).forEach(tefuda_image => {
+        tefuda_image.style.visibility = "hidden";
+        tefuda_image.src = "";
+    });
+}
+
 //手札のボタンの表示、非表示を切り替える
 function toggleVisibleTefudaButtons(flg){
     tefuda_buttons.forEach(tefuda_btn => {
@@ -350,6 +661,8 @@ function getThreeCardIndexes(tefuda_ary){
 
 //ロイヤルストレートの判定
 function isRoyalStraight(tefuda_ary){
+    //ジョーカーがあるかどうか
+    let jokey_flg = tefuda_ary.some(x => x[0] == TRUMP_MARK_TYPE.joker);
     //手札の番号の配列を生成（ジョーカーは排除して、ソートする）
     //通常の配列の長さは5だがジョーカーがある場合は4になる
     let tefuda_num_array = tefuda_ary.filter(x => x[0] != TRUMP_MARK_TYPE.joker).map(x => x[1]).sort((a, b) => a - b);
@@ -364,8 +677,8 @@ function isRoyalStraight(tefuda_ary){
                 return true;
             }
         }
-        //長さが3のとき（エースとジョーカーの両方があった場合）
-        else if(tefuda_num_array.length == 3){
+        //長さが3かつジョーカーがある場合（エースとジョーカーの両方があった場合）
+        else if(tefuda_num_array.length == 3 && jokey_flg){
             //先頭が10または11で連続した値であればtrueを返す
             if((tefuda_num_array[0] == 10 || tefuda_num_array[0] == 11) && ScriptUtil.isArrayStraight(tefuda_num_array)){
                 return true;
@@ -516,7 +829,7 @@ function judgeRoles(tefuda_ary){
         return [ROLES_INFO.fourcard.value, fourcard_index];
     }
     //フルハウス
-    else if(threecard_index.length == 3 && twopair_index.length == 4){
+    else if(threecard_index.length == 3 && twopair_index.length >= 4){
         return [ROLES_INFO.fullhouse.value, index_all];
     }
     //フラッシュ
@@ -535,6 +848,69 @@ function judgeRoles(tefuda_ary){
     else if(twopair_index.length == 4){
         return [ROLES_INFO.twopair.value, twopair_index];
     }
+}
+
+//指定した役のラベルを光らせる
+function lightRoleLabel(role_index, flg){
+    let role_labels = document.getElementsByClassName('role_label');
+    let role_values = document.getElementsByClassName('role_coin_value');
+    //flgがtrueなら光らせる
+    if(flg){
+        //文字の色を変える
+        role_labels[role_index].style.color = "rgb(0, 0, 0)";
+        role_values[role_index].style.color = "rgb(0, 0, 0)";
+        //文字のバックをアニメーション化する
+        let keyflame_animation = {background: ["rgb(255, 255, 255)", "rgb(170, 170, 170)"]};
+        let keyflame_options = {iterations: Infinity, direction: "alternate", duration: 1000};
+        //返り値はアニメーションを消すのに必要なため受け取っておく
+        animate_label_objs[role_index] = role_labels[role_index].animate(keyflame_animation, keyflame_options);
+        animate_value_objs[role_index] = role_values[role_index].animate(keyflame_animation, keyflame_options);
+    }
+    //falseなら普通に戻す
+    else{
+        //文字の色を元に戻す
+        role_labels[role_index].style.color = "rgb(255, 255, 255)";
+        role_values[role_index].style.color = "rgb(255, 255, 255)";
+        //オブジェクトがnullでないかチェック
+        if(animate_label_objs[role_index] != null && animate_value_objs[role_index] != null){
+            animate_label_objs[role_index].cancel();
+            animate_value_objs[role_index].cancel();
+        }
+    }
+
+}
+
+//指定した手札の画像を輝かせる
+function ShiningTefudaImage(tefuda_num){
+    //1から5であれば処理を行う
+    if(tefuda_num > 0 && tefuda_num <= TEFUDA_NUM){
+        let tefuda_images = document.getElementsByClassName('tefuda_img');
+        //疑似的に輝くオブジェクトを作成する
+        let tefuda_image_after = document.createElement('div');
+        tefuda_image_after.className = "tefuda_images_after";
+        tefuda_image_after.style.content = "";
+        tefuda_image_after.style.display = "block";
+        tefuda_image_after.style.width = "30px";
+        tefuda_image_after.style.height = "100%";
+        tefuda_image_after.style.position = "absolute";
+        tefuda_image_after.style.left = "0";
+        tefuda_image_after.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
+        tefuda_image_after.style.opacity = "0";
+        tefuda_image_after.style.transform = "rotate(135deg)";
+        let keyframes_shining = [{offset: 0.0, transform: "scale(0) rotate(135deg)", opacity: 0},
+                                 {offset: 0.5, transform: "scale(4) rotate(135deg)", opacity: 1},
+                                 {offset: 1.0, transform:"scale(50) rotate(135deg)", opacity: 0}
+        ];
+        let keyflame_options = {iterations: Infinity, duration: 1500};
+        tefuda_image_after.animate(keyframes_shining, keyflame_options);
+        tefuda_images[tefuda_num - 1].after(tefuda_image_after);
+    }
+}
+
+//手札の画像の輝きを止める
+function stopShiningTefudaImages(){
+    let tefuda_images_after = Array.from(document.getElementsByClassName('tefuda_images_after'));
+    tefuda_images_after.forEach(tefuda_image_after => tefuda_image_after.remove());
 }
 
 //一番左の手札に裏返しにしたトランプの画像を設置する

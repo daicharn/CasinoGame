@@ -7,10 +7,10 @@
  <body>
   <div id="roles_board_div">
    <div id="roles_big_label">
-    <div id="rsf_label">ロイヤルストレートフラッシュ</div>
-    <div id="fivec_label">ファイブカード</div>
-    <div id="sf_label">ストレートフラッシュ</div>
-    <div id="fourc_label">フォーカード</div>
+    <div class="role_label" id="rsf_label">ロイヤルストレートフラッシュ</div>
+    <div class="role_label" id="fivec_label">ファイブカード</div>
+    <div class="role_label" id="sf_label">ストレートフラッシュ</div>
+    <div class="role_label" id="fourc_label">フォーカード</div>
    </div>
    <div id="roles_big_value">
     <div class="role_coin_value" id="rsf_value">0</div>
@@ -19,11 +19,11 @@
     <div class="role_coin_value" id="fourc_value">0</div>
    </div>
    <div id="roles_small_label">
-    <div id="fh_label">フルハウス</div>
-    <div id="flush_label">フラッシュ</div>
-    <div id="straight_label">ストレート</div>
-    <div id="threec_label">スリーカード</div>
-    <div id="twopair_label">ツーペア</div>
+    <div class="role_label" id="fh_label">フルハウス</div>
+    <div class="role_label" id="flush_label">フラッシュ</div>
+    <div class="role_label" id="straight_label">ストレート</div>
+    <div class="role_label" id="threec_label">スリーカード</div>
+    <div class="role_label" id="twopair_label">ツーペア</div>
    </div>
    <div id="roles_small_value">
     <div class="role_coin_value" id="fh_value">0</div>
@@ -35,6 +35,7 @@
   </div>
   <div id="tefuda_block_div"></div>
   <div id="btn_flip">くばる</div>
+  <div id="btn_retry">もう一度</div>
   <div id="bet_setting_div">
    <p id="bet_setting_p">掛け金を設定してください</p>
    <table>
@@ -64,6 +65,7 @@
      <div id="bet_win_value">0</div>
     </div>
   </div>
+  <div id="role_str_center"></div>
  </body>
  <script src="../script_util.js"></script>
  <script src="../script_core.js"></script>
