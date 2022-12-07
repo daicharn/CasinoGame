@@ -332,8 +332,8 @@ async function countUpDownElemNum(target_div, start, end, increment){
                 start -= increment;
             }
             target_div.innerText = start;
-            //10ms待機する
-            await ScriptUtil.sleep(10);
+            //20ms待機する
+            await ScriptUtil.sleep(20);
         }
     }
 }
@@ -430,10 +430,8 @@ document.getElementById('btn_flip').addEventListener("click",async() =>{
         let win_value_div = document.getElementById('bet_win_value');
         let coin_value = Number(coin_value_div.innerText);
         let win_value = Number(win_value_div.innerText);
-        //所持コインを増やす
-        await countUpDownElemNum(coin_value_div, coin_value, coin_value + win_value, multiplier_value);
-        //獲得コインを減らす
-        await countUpDownElemNum(win_value_div, win_value, 0, multiplier_value);
+        //所持コインを増やす、獲得コインを減らす処理を同時に行う
+        await Promise.all([countUpDownElemNum(coin_value_div, coin_value, coin_value + win_value, multiplier_value), countUpDownElemNum(win_value_div, win_value, 0, multiplier_value)]);
     }
     //役が成立していない場合
     else{
