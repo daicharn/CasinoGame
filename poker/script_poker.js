@@ -25,6 +25,9 @@ let bet_count = 0;
 //成立した役の種類を記憶
 let role_complete_type = -1;
 
+//コインの増減アニメーションを終了させるフラグ
+let countend_flg = false;
+
 //アニメーション用のオブジェクト
 //役のラベル用
 let animate_label_objs = new Array(Object.keys(ROLES_INFO).length).fill(null);
@@ -175,7 +178,10 @@ document.getElementById('btn_enter').addEventListener("click", async() =>{
     toggleVisibleBetSetting(false);
 
     //山札からカードを5枚引く
-    drawFiveCardFromYamafuda();
+    //drawFiveCardFromYamafuda();
+    //テスト
+    testDrawFiveCardTargetRoles(ROLES_INFO.fivecard.value);
+
     //手札をソートする
     sortTefudaArray(tefuda_array);
     //5枚引いた手札の画像を挿入
@@ -332,10 +338,18 @@ async function countUpDownElemNum(target_div, start, end, increment){
                 start -= increment;
             }
             target_div.innerText = start;
-            //20ms待機する
-            await ScriptUtil.sleep(20);
+            //画面がクリックされない限り指定の間隔でカウント（画面が押されたら瞬時に終了）
+            if(!countend_flg){
+                //100ms待機する
+                await ScriptUtil.sleep(100);
+            }
         }
     }
+}
+
+//コインの増減アニメーションを終了させるフラグを切り替える
+function toggleCountEndFlg(){
+    countend_flg = !countend_flg;
 }
 
 //カードを配るボタンがクリックされた時の処理を登録
@@ -430,8 +444,17 @@ document.getElementById('btn_flip').addEventListener("click",async() =>{
         let win_value_div = document.getElementById('bet_win_value');
         let coin_value = Number(coin_value_div.innerText);
         let win_value = Number(win_value_div.innerText);
+
+        //body要素を取得
+        let element_body = document.getElementsByTagName('body');
+        //body（画面全体のどこか）をクリックしたときにコインの演出をスキップするフラグをONにするイベントを追加
+        element_body[0].addEventListener("click", toggleCountEndFlg);
         //所持コインを増やす、獲得コインを減らす処理を同時に行う
         await Promise.all([countUpDownElemNum(coin_value_div, coin_value, coin_value + win_value, multiplier_value), countUpDownElemNum(win_value_div, win_value, 0, multiplier_value)]);
+        //bodyのイベントを削除
+        element_body[0].removeEventListener("click", toggleCountEndFlg);
+        //コインの増減アニメーションを終了させるフラグをオフにする
+        countend_flg = false;
     }
     //役が成立していない場合
     else{
@@ -967,6 +990,79 @@ function testTefudaOutput(num, low_roles_hidden){
         }
         */
     }
+}
+
+//同じ番号に関連する役の生成（スリーカード、フォーカード、ファイブカード専用）
+function testDrawSameNumCards(card_num, yamafuda_array_arg){
+    //3から5であれば実行
+    if(card_num >= 3 && card_num <= TEFUDA_NUM){
+        //カードの番号をランダムに決定
+        let card_num_rand = 1 + Math.floor(Math.random() * TRUMP_MAX);
+        //山札からランダムな番号のカード4種類とジョーカーを取り出した配列を作成
+        let array_five = yamafuda_array_arg.filter(x => x[1] == card_num_rand || x[0] == TRUMP_MARK_TYPE.joker);
+        //上の配列から3個取り出して格納する配列
+        let array_result = [];
+        //配列から3～5個ランダムで取り出す
+        for(let i = 0 ; i < card_num; i++){
+            //5枚の中からランダムで1枚引く
+            let card_draw = array_five[Math.floor(Math.random() * array_five.length)];
+            //引いたカードを記憶
+            array_result.push(card_draw);
+            //5枚の配列の中から引いたカードを除去
+            array_five = array_five.filter(x => JSON.stringify(x) != JSON.stringify(card_draw));
+            //山札からも引いたカードを除去
+            yamafuda_array_arg = yamafuda_array_arg.filter(x => JSON.stringify(x) != JSON.stringify(card_draw));
+        }
+        //同じカード4枚＋ジョーカーの配列の中から残った0～2枚のカードを山札から除去
+        yamafuda_array_arg = yamafuda_array_arg.filter(x => array_five.every(y => x != y));
+
+        //残りの0～2枚を現在の山札からランダムに引く
+        for(let i = 0; i < array_five.length; i++){
+            array_result.push(yamafuda_array_arg.pop());
+        }
+
+        //手札の結果と山札の状態を配列として返す
+        return [array_result, yamafuda_array_arg];
+        /*
+        console.log(Array.from(yamafuda_array_test).sort((a, b) => a[1] - b[1]).sort((a, b) => a[0] - b[0]));
+        console.log(array_result);
+        */
+    }
+}
+
+//手札が指定した役になるよう山札からカードを引く処理
+function testDrawFiveCardTargetRoles(target_role){
+    //山札をコピー（テスト用）
+    yamafuda_array_test = yamafuda_array.slice();
+    //操作の結果（手札と山札を格納）
+    let result = [];
+    //
+    //スリーカード
+    if(target_role == ROLES_INFO.threecard.value){
+        result = testDrawSameNumCards(3, yamafuda_array_test);
+    }
+    //フォーカード
+    else if(target_role == ROLES_INFO.fourcard.value){
+        result = testDrawSameNumCards(4, yamafuda_array_test);
+    }
+    //ファイブカード
+    else if(target_role == ROLES_INFO.fivecard.value){
+        result = testDrawSameNumCards(5, yamafuda_array_test);
+    }
+
+    //完成した手札を実際の手札の配列に代入
+    tefuda_array = result[0];
+    //操作した山札を実際の山札に代入
+    yamafuda_array = result[1];
+
+    /*
+    for(let i = 0; i < TEFUDA_NUM; i++){
+        //山札からカードを一枚引く
+        let yamafuda_draw = yamafuda_array.pop();
+        //引いたカードを手札に入れる
+        tefuda_array.push(yamafuda_draw);
+    }
+    */
 }
 
 
