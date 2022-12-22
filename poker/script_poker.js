@@ -178,9 +178,9 @@ document.getElementById('btn_enter').addEventListener("click", async() =>{
     toggleVisibleBetSetting(false);
 
     //山札からカードを5枚引く
-    //drawFiveCardFromYamafuda();
+    drawFiveCardFromYamafuda();
     //テスト
-    testDrawFiveCardTargetRoles(ROLES_INFO.fivecard.value);
+    //testDrawFiveCardTargetRoles(ROLES_INFO.straight.value);
 
     //手札をソートする
     sortTefudaArray(tefuda_array);
@@ -992,6 +992,45 @@ function testTefudaOutput(num, low_roles_hidden){
     }
 }
 
+//ストレート（役）の手札の生成
+function testDrawStraightCards(yamafuda_array_arg){
+    //引数で受け取った山札をコピー
+    let yamafuda_array_copy = yamafuda_array_arg.slice();
+    //一番左のカードの番号を決定（1～9）
+    let card_num_left = 1 + Math.floor(Math.random() * (TRUMP_MAX - 4));
+    //5枚のカードの柄を決定
+    let card_mark_list = [];
+    //ランダムに決めた結果カードの柄が5枚ともすべて同じなら再生成
+    while(card_mark_list.filter((x) => x != card_mark_list[0]).length < 1){
+        //カードの柄のリストを初期化
+        card_mark_list.length = 0;
+        //5枚のカードの柄を決定
+        for(let i = 0; i < TEFUDA_NUM; i++){
+            //カードの柄をランダムに決める（0～3）
+            let card_mark_rand = Math.floor(Math.random() * 4);
+            card_mark_list.push(card_mark_rand);
+        }
+    }
+    //完成した手札を格納する配列
+    let array_result = [];
+    //決定された番号順と柄の通りに手札を5枚作成する
+    for(let i = 0; i < TEFUDA_NUM; i++){
+        //カードを作成する
+        let card_made = [card_mark_list[i], card_num_left + i];
+        //一番右の手札については1/3の確率でジョーカーにする
+        if(i == TEFUDA_NUM - 1 && Math.floor(Math.random() * 3) == 0){
+            card_made = [4, 1];
+        }
+        //作成したカードを記憶
+        array_result.push(card_made);
+        //山札から引いたカードを除去
+        yamafuda_array_copy = yamafuda_array_copy.filter(x => JSON.stringify(x) != JSON.stringify(card_made));
+    }
+
+    //手札の結果と山札の状態を配列として返す
+    return [array_result, yamafuda_array_copy];
+}
+
 //同じ番号に関連する役の生成（スリーカード、フォーカード、ファイブカード専用）
 function testDrawSameNumCards(card_num, yamafuda_array_arg){
     //3から5であれば実行
@@ -1000,7 +1039,7 @@ function testDrawSameNumCards(card_num, yamafuda_array_arg){
         let card_num_rand = 1 + Math.floor(Math.random() * TRUMP_MAX);
         //山札からランダムな番号のカード4種類とジョーカーを取り出した配列を作成
         let array_five = yamafuda_array_arg.filter(x => x[1] == card_num_rand || x[0] == TRUMP_MARK_TYPE.joker);
-        //上の配列から3個取り出して格納する配列
+        //完成した手札を格納する配列
         let array_result = [];
         //配列から3～5個ランダムで取り出す
         for(let i = 0 ; i < card_num; i++){
@@ -1048,6 +1087,10 @@ function testDrawFiveCardTargetRoles(target_role){
     //ファイブカード
     else if(target_role == ROLES_INFO.fivecard.value){
         result = testDrawSameNumCards(5, yamafuda_array_test);
+    }
+    //ストレート
+    else if(target_role == ROLES_INFO.straight.value){
+        result = testDrawStraightCards(yamafuda_array_test);
     }
 
     //完成した手札を実際の手札の配列に代入
