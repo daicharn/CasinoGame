@@ -109,11 +109,8 @@ body{
     background-color: rgba(20, 20, 20, 0.8);
 }
 
-#bet_setting_div{
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translateX(-50%);
+#coin_table{
+    margin: auto;
 }
 #bet_setting_p{
     color: rgb(255, 255, 255);
